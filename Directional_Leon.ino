@@ -1,43 +1,44 @@
-static int CHECK1_Pin = 2;
+#define DELAY_TIME 20 // unit: ms
+#define CHECK_INPIN 2
 
-unsigned char Flow_Init = 0;
-unsigned char counter= 0;
+unsigned char count = 0;
 
 unsigned char Period[3]= {0, 0, 0};
 unsigned char Pos[2]= {0, 0};
 unsigned char Neg[2]= {0, 0};
 
+unsigned char tempPositiveVal = 0;
+unsigned char tempNegativeVal = 0;
+unsigned char positiveVal = 0;
+unsigned char negativeVal = 0;
+
 
 void setup()
 {
-  pinMode(CHECK1_Pin, INPUT_PULLUP);
+  pinMode(CHECK_INPIN, INPUT_PULLUP);
   
   Serial.begin(115200);   // USB Debug
   Serial1.begin(115200);  // UART Communication 
 }
 
-
 void loop()
 {
-  // Initial Information
-  if (Flow_Init == 0)
-  {
-    delay(2000);  
-    Flow_Init = 1;
-  }
+  delay(DELAY_TIME); 
+  int val = digitalRead(CHECK_INPIN); 
+  float lowFrequency = 0.6; // unit: Hz
+  float highFrequency = 1.5; // unit: Hz
 
-  delay(20); 
-  int sensorVal_1 = digitalRead(CHECK1_Pin); 
-  float lowValueOfFrequency = 0.6; // unit: Hz
-  float highValueOfFrequency = 1.5; // unit: Hz
-
-  checkFrequencyRange(lowValueOfFrequency, highValueOfFrequency, sensorVal_1);
+  checkFrequencyRange(lowFrequency, highFrequency, val);
+  
+  // Leon Huang design
+//  checkFrequencyRange_2(lowFrequency, highFrequency, val);
 }
 
 void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
 {
-  float countForHighValue = ((1 / highValue) * 1000 / 20);
-  float countForLowValue = ((1/ lowValue) * 1000 / 20);
+  // 67 count ~ 167 count
+  float lowerBound = ((1 / highValue) * 1000 / 20);
+  float upperBound = ((1/ lowValue) * 1000 / 20);
 
   // Count
   if (sensorVal == LOW)
@@ -54,12 +55,12 @@ void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
   }
 
   // Clear data
-  if (Pos[0] > countForLowValue)
+  if (Pos[0] > upperBound) // > 167 count
   {
     Pos[0]= 0;
     Period[0]= 0; 
   }
-  if (Neg[0] > countForLowValue)
+  if (Neg[0] > upperBound) // > 167 count
   {
     Neg[0]= 0;
     Period[1]= 0; 
@@ -86,12 +87,12 @@ void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
   }
 
   // Check frequency range
-  counter++;
-  if (counter >= 10) // 200 ms
+  count++;
+  if (count >= 10) // 200 ms 檢查一次
   {
     Period[2] = Period[0] + Period[1];
     
-    if ((Period[2] >= countForHighValue) && (Period[2] <= countForLowValue))
+    if ((Period[2] >= lowerBound) && (Period[2] <= upperBound))
     {
       Serial.print('%');
 //      Serial.println(Period[2], DEC);
@@ -104,7 +105,70 @@ void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
       Serial.println('1');  
     }
 
-    counter = 0;
+    count = 0;
+  }
+}
+
+// Leon Huang design
+void checkFrequencyRange_2(float lowValue, float highValue, int sensorVal)
+{
+  // 67 count ~ 167 count
+  float lowerBound = ((1 / highValue) * 1000 / 20);
+  float upperBound = ((1/ lowValue) * 1000 / 20);
+
+  // Count
+  if (sensorVal == LOW)
+  {
+    tempNegativeVal += 1;
+    
+    if (tempPositiveVal > 0)
+    {
+      positiveVal = tempPositiveVal;
+      tempPositiveVal = 0;
+    }
+  }
+  else
+  {
+    tempPositiveVal += 1;
+    
+    if (tempNegativeVal > 0) 
+    {
+      negativeVal = tempNegativeVal;
+      tempNegativeVal = 0;
+    }
+  }
+
+  // Clear data
+  if (tempNegativeVal > upperBound) // > 167 count
+  {
+    tempNegativeVal = 0;
+    negativeVal = 0;
+  }
+  if (tempPositiveVal > upperBound) // > 167 count
+  {
+    tempPositiveVal = 0;
+    positiveVal = 0;
+  }
+
+  count++;
+  if (count >= 10) // 200 ms 檢查一次
+  {
+    unsigned char sum = negativeVal + positiveVal;
+    
+    if ((sum >= lowerBound) && (sum <= upperBound))
+    {
+      Serial.print('%');
+//      Serial.println(sum, DEC);
+      Serial.println('0');
+    }
+    else
+    {
+      Serial.print('%');
+//      Serial.println(sum, DEC);
+      Serial.println('1');  
+    }
+
+    count = 0;
   }
 }
 
