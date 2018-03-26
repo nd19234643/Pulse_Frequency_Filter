@@ -24,24 +24,24 @@ void setup()
 void loop()
 {
   delay(DELAY_TIME); 
-  int val = digitalRead(CHECK_INPIN); 
+  unsigned char pinStatus = digitalRead(CHECK_INPIN); 
   float lowFrequency = 0.6; // unit: Hz
   float highFrequency = 1.5; // unit: Hz
 
-  checkFrequencyRange(lowFrequency, highFrequency, val);
+  checkFrequencyRange(lowFrequency, highFrequency, pinStatus);
   
   // Leon Huang design
-//  checkFrequencyRange_2(lowFrequency, highFrequency, val);
+//  checkFrequencyRange_2(lowFrequency, highFrequency, pinStatus);
 }
 
-void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
+void checkFrequencyRange(float lowValue, float highValue, int pinStatus)
 {
   // 67 count ~ 167 count
-  float lowerBound = ((1 / highValue) * 1000 / 20);
-  float upperBound = ((1/ lowValue) * 1000 / 20);
+  float lowerBound = ((1 / highValue) * 1000 / DELAY_TIME);
+  float upperBound = ((1/ lowValue) * 1000 / DELAY_TIME);
 
   // Count
-  if (sensorVal == LOW)
+  if (pinStatus == LOW)
   {
     Neg[0] = Neg[0] + 1;
     if (Pos[0] > 0)
@@ -88,7 +88,7 @@ void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
 
   // Check frequency range
   count++;
-  if (count >= 10) // 200 ms 檢查一次
+  if (count >= 10) // DELAY_TIME * 10 = 200 ms 檢查一次
   {
     Period[2] = Period[0] + Period[1];
     
@@ -110,14 +110,14 @@ void checkFrequencyRange(float lowValue, float highValue, int sensorVal)
 }
 
 // Leon Huang design
-void checkFrequencyRange_2(float lowValue, float highValue, int sensorVal)
+void checkFrequencyRange_2(float lowValue, float highValue, int pinStatus)
 {
   // 67 count ~ 167 count
-  float lowerBound = ((1 / highValue) * 1000 / 20);
-  float upperBound = ((1/ lowValue) * 1000 / 20);
+  float lowerBound = ((1 / highValue) * 1000 / DELAY_TIME);
+  float upperBound = ((1/ lowValue) * 1000 / DELAY_TIME);
 
   // Count
-  if (sensorVal == LOW)
+  if (pinStatus == LOW)
   {
     tempNegativeVal += 1;
     
@@ -171,6 +171,4 @@ void checkFrequencyRange_2(float lowValue, float highValue, int sensorVal)
     count = 0;
   }
 }
-
-
 
